@@ -1,0 +1,48 @@
+version: '3.8'
+
+# /etc/hosts
+# 127.0.0.1 mongo1
+# 127.0.0.1 mongo2
+# 127.0.0.1 mongo3
+
+services:
+  mongo1:
+    # Wybranie wersji MongoDB
+    image: mongo:5
+    # Nadanie nazwy instancji
+    container_name: mongo1
+    # Uruchomienie komend:
+    # --replSet rs0 -> Zdefiniowanie nazwy repliki
+    # --bind_ip_all -> powiązanie instancji do adresów IPv4
+    # --port 1111   -> Zdefiniowanie portu na którym ma zostać utworzona instancja 
+    command: ["--replSet", "rs0", "--bind_ip_all", "--port", "1111"]
+    # Utworzenie lokalizacji dla danych
+    volumes:
+      - ./data/mongo1:/data/db
+    # Udostępnienie portów poza kontener
+    ports:
+      - 1111:1111
+    # Po uruchomieniu wywołanie komendy do utworzenie repliki rs.initiate() oraz przekazanie do niej
+    # listy baz, które będą wchodziły w skład repliki
+    healthcheck:
+      test: test $$(echo "rs.initiate({_id:\"rs0\",members:[{_id:0,host:\"mongo1:1111\"},{_id:1,host:\"mongo2:2222\"},{_id:2,host:\"mongo3:3333\"}]}).ok || rs.status().ok" | mongo --port 1111 --quiet) -eq 1
+      interval: 10s
+      start_period: 30s
+
+  mongo2:
+    image: mongo:5
+    container_name: mongo2
+    command: ["--replSet", "rs0", "--bind_ip_all", "--port", "2222"]
+    volumes:
+      - ./data/mongo2:/data/db
+    ports:
+      - 2222:2222
+
+  mongo3:
+    image: mongo:5
+    container_name: mongo3
+    command: ["--replSet", "rs0", "--bind_ip_all", "--port", "3333"]
+    volumes:
+      - ./data/mongo3:/data/db
+    ports:
+      - 3333:3333
